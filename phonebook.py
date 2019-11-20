@@ -13,6 +13,7 @@ def main():
     = parser.middle, last = parser.last, number = parser.number)
 class Parser:
   def __init__(self, argc = None, raw_command_args = None):
+    self.first = self.middle = self.last = self.number = None
     self.argc = argc
     self.raw_command = raw_command_args
     self._init()
@@ -28,7 +29,10 @@ class Parser:
       self.command = "ADD"
     else:
       err("Invalid operation", exit_code = 1)
+  
   def validate_args(self):
+    if self.command == "LIST" or self.command == "HELP":
+      return 
     name = number = name_or_num = None
     if self.command == "ADD":
       name, number = self.raw_command[1:]
@@ -47,7 +51,7 @@ class Parser:
       is_name_valid = self.validate_name(name_or_num)
       is_number_valid = self.validate_number(name_or_num)
       if is_name_valid:
-        self.first, self.middle, self.last = self.get_name(name)
+        self.first, self.middle, self.last = self.get_name(name_or_num)
       elif is_number_valid:
         self.number = number
       else:
@@ -77,6 +81,9 @@ class Parser:
         first = first.strip()
         middle = middle.strip()
         last = last.strip()
+      if first: first = first.lower()
+      if middle: middle = middle.lower()
+      if last: last = last.lower()
     return first, middle, last
   def validate_name(self, name):
     return bool(re.match("^[a-zA-Z ,.'-]+$", name))
@@ -91,7 +98,28 @@ class Person:
     self.middle = middle
     self.last = last
     self.init_db()
-    self.handle_flow()
+    if self.command == "HELP":
+      print("usage: <command> <arguments>")
+      print("<command>: ADD | DEL | LIST")
+      print("ADD: [name] [phone number]")
+      print("DEL: [name] | [phone number]")
+      print("LIST: None")
+      sys.exit(0)
+    elif self.command == "LIST":
+      self._list()
+    else:  
+      self.handle_flow()
+  def _list(self):
+    c = self.conn.cursor()
+    c.execute("SELECT * FROM people;")
+    for i, x in enumerate(c.fetchall()):
+      string = ""
+      if x[0]: string += f'Name: {x[0]} '
+      if x[1]: string += f'{x[1]} '
+      if x[2]: string += f'{x[2]} '
+      string += f'Number: {x[3]}'
+      print(string)
+  
   def init_db(self):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     db_path = os.path.join(BASE_DIR, "people.db")
@@ -116,6 +144,33 @@ class Person:
       c.execute('INSERT INTO people (first, number) VALUES (?,?);', (self.first, self.number,))
     self.conn.commit()
   def delete(self):
-    pass
+    if self.first or self.middle or self.last:
+      c = self.conn.cursor()
+      if self.first and self.middle and self.last:
+        c.execute('SELECT * FROM people WHERE first = ? AND middle = ? AND last = ?;',(self.first, self.middle, self.last, ))
+        if len(c.fetchall()) == 0:
+          err('Record does not exist', exit_code = 1)
+        else:
+          c.execute('DELETE FROM people WHERE first = ? AND middle = ? AND last = ?;',(self.first, self.middle, self.last,))
+      elif self.first and self.last:
+        c.execute('SELECT * FROM people WHERE first = ? AND last = ?;', (self.first, self.last,))
+        if len(c.fetchall()) == 0:
+          err('Record does not exist', exit_code = 1)
+        else:
+          c.execute('DELETE FROM people WHERE first = ? AND last = ?;',(self.first, self.last,))
+      elif self.first:
+        c.execute('SELECT * FROM people WHERE first = ?;', (self.first,))
+        if len(c.fetchall()) == 0:
+          err('Record does not exist', exit_code = 1)
+        else:
+          c.execute('DELETE FROM people WHERE first = ?;',(self.first,))
+    elif self.number:
+      c = self.conn.cursor()
+      c.execute('SELECT * FROM people WHERE number = ?;', (self.number, ))
+      if len(c.fetchall()) == 0:
+        err('Record does not exist', exit_code = 1)
+      else:
+        c.execute('DELETE FROM people WHERE number = ?;', (self.number))
+    self.conn.commit()
 if __name__ == '__main__':
   main()
