@@ -41,7 +41,6 @@ class Parser:
     if name is not None and number is not None:
       is_name_valid = self.validate_name(name)
       is_number_valid = self.validate_number(number)
-      print(is_name_valid, is_number_valid)
       if is_name_valid and is_number_valid:
         self.first, self.middle, self.last = self.get_name(name)
         self.number = number
@@ -56,7 +55,6 @@ class Parser:
         self.number = number
       else:
         err("Invalid argument(S) given", exit_code = 1)
-    print(self.first, self.middle, self.last)
   def get_name(self, name):
     first = middle = last = None
     if ',' in name:
@@ -174,3 +172,4 @@ class Person:
     self.conn.commit()
 if __name__ == '__main__':
   main()
+  sys.exit(0)
