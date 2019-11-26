@@ -52,7 +52,7 @@ class Parser:
       if is_name_valid:
         self.first, self.middle, self.last = self.get_name(name_or_num)
       elif is_number_valid:
-        self.number = number
+        self.number = name_or_num
       else:
         err("Invalid argument(S) given", exit_code = 1)
   def get_name(self, name):
@@ -139,6 +139,7 @@ class Person:
       c = self.conn.cursor()
       c.execute('INSERT INTO people (first,last, number) VALUES (?,?,?);',(self.first, self.last, self.number,))
     elif self.first:
+      c = self.conn.cursor()
       c.execute('INSERT INTO people (first, number) VALUES (?,?);', (self.first, self.number,))
     self.conn.commit()
   def delete(self):
@@ -168,7 +169,7 @@ class Person:
       if len(c.fetchall()) == 0:
         err('Record does not exist', exit_code = 1)
       else:
-        c.execute('DELETE FROM people WHERE number = ?;', (self.number))
+        c.execute('DELETE FROM people WHERE number = ?;', (self.number,))
     self.conn.commit()
 if __name__ == '__main__':
   main()
